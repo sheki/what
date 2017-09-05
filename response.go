@@ -1,10 +1,32 @@
 package what
 
+import (
+	"fmt"
+
+	"github.com/davecgh/go-spew/spew"
+)
+
 type GithubResponse struct {
 	Data struct {
 		Viewer struct {
 			Login string `json:"login"`
 		} `json:"viewer"`
+		Organization struct {
+			Teams struct {
+				Edges []struct {
+					Node struct {
+						Name    string `json:"name"`
+						Members struct {
+							Edges []struct {
+								Node struct {
+									Login string `json:"login"`
+								} `json:"node"`
+							} `json:"edges"`
+						} `json:"members"`
+					} `json:"node"`
+				} `json:"edges"`
+			} `json:"teams"`
+		} `json:"organization"`
 		Repository struct {
 			PullRequests struct {
 				TotalCount int `json:"totalCount"`
@@ -27,6 +49,12 @@ type GithubResponse struct {
 			} `json:"pullRequests"`
 		} `json:"repository"`
 	} `json:"data"`
+}
+
+func (g *GithubResponse) UsersInTeam(team string) []string {
+	spew.Dump(g.Data)
+	return nil
+	// return g.Data.Organization.Teams.Edges.UsersInTeam(team)
 }
 
 type ReviewRequest struct {
@@ -99,10 +127,15 @@ const (
 func (g GithubResponse) UserPRs() []PullRequest {
 	login := g.UserLogin()
 	var res []PullRequest
+	squadUsers := g.UsersInTeam("Squad")
+	fmt.Println("squadUsers", squadUsers)
+
 	for _, pr := range g.Data.Repository.PullRequests.Edges {
 		current := pr.Node
 		if current.Author.Login == login {
-			var approvers = current.Reviews.Edges.ActorsByState(APPROVED)
+			var approvers = mergeApprovers(
+				current.Reviews.Edges.ActorsByState(APPROVED),
+				squadUsers)
 			var rejectors = current.Reviews.Edges.ActorsByState(CHANGES_REQUEST)
 			var commentors = current.Reviews.Edges.ActorsByState(COMMENTED)
 			r := PullRequest{
@@ -120,9 +153,22 @@ func (g GithubResponse) UserPRs() []PullRequest {
 	return res
 }
 
+func mergeApprovers(approvers, squadUsers []string) []string {
+	var res []string
+	for _, a := range approvers {
+		for _, usr := range squadUsers {
+			if usr == a {
+				res = append(res, a)
+			}
+		}
+	}
+	return res
+}
+
 func (g GithubResponse) ParticipatingPRs() []PullRequest {
 	login := g.UserLogin()
 	var res []PullRequest
+	squadUsers := g.UsersInTeam("Squad")
 	for _, pr := range g.Data.Repository.PullRequests.Edges {
 		current := pr.Node
 		if current.Author.Login == login {
@@ -132,7 +178,9 @@ func (g GithubResponse) ParticipatingPRs() []PullRequest {
 			if a.Reviewer() != login {
 				continue
 			}
-			var approvers = current.Reviews.Edges.ActorsByState(APPROVED)
+			var approvers = mergeApprovers(
+				current.Reviews.Edges.ActorsByState(APPROVED),
+				squadUsers)
 			var rejectors = current.Reviews.Edges.ActorsByState(CHANGES_REQUEST)
 			var commentors = current.Reviews.Edges.ActorsByState(COMMENTED)
 

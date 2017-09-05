@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/http/httputil"
 
 	"github.com/google/go-github/github"
 	"github.com/gorilla/mux"
@@ -121,6 +122,7 @@ func HomeHandler(w http.ResponseWriter, r *http.Request) {
 
 	data, err := githubData(&tkn)
 	if err != nil {
+		log.Println(err)
 		fmt.Fprintln(w, "aborted")
 		return
 	}
@@ -148,7 +150,7 @@ type GithubData struct {
 	ParticipatingPRs []PullRequest
 }
 
-var EmptyGithubData = GithubData{}
+var emptyGHResp = GithubData{}
 
 func githubData(tkn *oauth2.Token) (GithubData, error) {
 	client := github.NewClient(oauthCfg.Client(oauth2.NoContext, tkn))
@@ -157,15 +159,20 @@ func githubData(tkn *oauth2.Token) (GithubData, error) {
 	}
 	newReq, err := client.NewRequest("POST", "https://api.github.com/graphql", oh)
 	if err != nil {
-		return EmptyGithubData, err
+		return emptyGHResp, err
 	}
 
 	var res GithubResponse
-	_, err = client.Do(oauth2.NoContext, newReq, &res)
+	resp, err := client.Do(oauth2.NoContext, newReq, &res)
 
 	if err != nil {
-		return EmptyGithubData, err
+		return emptyGHResp, err
 	}
+	dump, err := httputil.DumpResponse(resp.Response, false)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("%q", dump)
 	r := GithubData{
 		UserPRs:          res.UserPRs(),
 		ParticipatingPRs: res.ParticipatingPRs(),
