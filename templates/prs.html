@@ -1,0 +1,52 @@
+{{ define "title"}}<title>WHAT</title>{{ end }}
+{{ define "content" }}
+<h2 style="font-size:large;margin: 10;">My Pull Requests</h2>
+<p>
+  <ul>
+    {{range .UserPRs}}
+    <li style="margin: 10">
+      <b style="font-weight:bold;">{{.Number}} </b>
+      {{ if .Approved }}
+        <a style="color:green;" href="{{ .URL }}"j>
+          {{ .Title }}
+        </a>
+      {{ else if .Rejected }}
+        <a color="color:red;" href="{{ .URL }}">
+          {{ .Title }}
+        </a>
+      {{ else }}
+        <a color="color:black;" href="{{ .URL }}">
+          {{ .Title }}
+        </a>
+      {{ end }}
+    </li>
+    {{ end }}
+  </ul>
+  </p>
+<hr/>
+<h2 style="font-size:large;margin: 10;">Paritcipating PRs</h2>
+<p>
+  <ul>
+    {{range .ParticipatingPRs}}
+    <li style="margin: 10">
+      <b style="font-weight:bold;">{{.Number}} </b>
+      <span>[ 😎 {{.Author}}]</span>
+      {{ if .Approved }}
+        <a style="color:green;" href="{{ .URL }}"j>
+          {{ .Title }}
+        </a>
+      {{ else if .Rejected }}
+        <a color="color:red;" href="{{ .URL }}">
+          {{ .Title }}
+        </a>
+      {{ else }}
+        <a color="color:black;" href="{{ .URL }}">
+          {{ .Title }}
+        </a>
+      {{ end }}
+    </li>
+    {{ end }}
+  </ul>
+</p>
+
+{{ end }}
